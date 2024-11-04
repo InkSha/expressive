@@ -1,9 +1,6 @@
 import { Module } from "@expressive/common"
-import { AppController, UserController } from "./app.controller"
-import { AppService } from "./app.service"
-
+import { UserModule } from "./modules/user/user.module"
 @Module({
-  controllers: [AppController, UserController],
-  providers: [AppService],
+  imports: [UserModule],
 })
 export class AppModule {}

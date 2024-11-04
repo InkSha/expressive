@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from "@expressive/common"
 
 @Injectable()
-export class AppService {
+export class UserService {
   private _count = 0
 
   constructor() {

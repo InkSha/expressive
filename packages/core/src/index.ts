@@ -10,6 +10,7 @@ export class AppFactory {
   constructor(module: Constructor) {
     this.parseModule(module)
   }
+
   private parseModule(module: Constructor) {
     if (!Reflect.hasMetadata(TokenConfig.Moudle, module)) {
       throw new TypeError(`${module.name} Not Module!`)
@@ -20,33 +21,31 @@ export class AppFactory {
       module,
     ) as ModuleConfig
 
-    const importProviders = imports.map(this.parseModule).flatMap((config) => config.providers)
+    const importProviders = imports
+      .flatMap((module) => this.parseModule(module))
+      .flatMap((config) => config.exports)
 
     for (const controller of controllers) {
-      this.app.use(this.parseController(controller, [...providers, ...importProviders]))
+      this.app.use(
+        this.parseController(controller, [...providers, ...Array.from(new Set(importProviders))]),
+      )
     }
 
-    return {
-      providers,
-      controllers,
-    }
+    return { exports }
   }
 
   private toEntity(proto: Constructor, providers: Constructor[] = []) {
     if (this.entity.has(proto)) return this.entity.get(proto)
 
-    const params = []
+    const args = Reflect.getMetadata("design:paramtypes", proto) as Constructor[]
 
-    try {
-      const args = Reflect.getMetadata("design:paramtypes", proto) as Constructor[]
-      //
-      // proto = class protot { constructor(private readonly provider1, private readonly provider2) {} }
-      // args = [provider1, provider2]
-      //
-      // start instance providers
-      //
-      params.push(...args.map((fn) => this.toEntity(fn, providers)))
-    } catch {}
+    const params = args.map((fn) => {
+      if (!providers.some((p) => p === fn)) {
+        throw new EvalError(`${fn.name} not in providers`)
+      }
+
+      return this.toEntity(fn, providers)
+    })
 
     const entity = new proto(...params)
 
@@ -61,6 +60,11 @@ export class AppFactory {
   }
 
   public start(port = 3000) {
+    this.app.use((req, res, next) => {
+      console.log(this.entity)
+      next()
+    })
+
     this.app.listen(port, () => {
       console.log("run")
     })
