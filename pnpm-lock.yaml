@@ -43,6 +43,29 @@ importers:
         specifier: ^5.6.3
         version: 5.6.3
 
+  packages/common:
+    dependencies:
+      '@expressive/shared':
+        specifier: workspace:^
+        version: link:../shared
+
+  packages/core:
+    dependencies:
+      '@expressive/common':
+        specifier: workspace:^
+        version: link:../common
+
+  packages/example:
+    dependencies:
+      '@expressive/common':
+        specifier: workspace:^
+        version: link:../common
+      '@expressive/core':
+        specifier: workspace:^
+        version: link:../core
+
+  packages/shared: {}
+
 packages:
 
   '@ampproject/remapping@2.3.0':

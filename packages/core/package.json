@@ -1,0 +1,29 @@
+{
+  "name": "@expressive/core",
+  "version": "0.0.0",
+  "description": "Expressive core",
+  "author": "inksha",
+  "homepage": "https://github.com/InkSha/expressive#readme",
+  "license": "MIT",
+  "main": "src/index.ts",
+  "publishConfig": {
+    "registry": "https://registry.npmmirror.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/InkSha/expressive.git",
+    "directory": "packages/core"
+  },
+  "scripts": {
+    "dev": "ts-node ./src/index.ts",
+    "check": "biome check --fix",
+    "lint": "biome lint --fix",
+    "format": "biome format --fix"
+  },
+  "bugs": {
+    "url": "https://github.com/InkSha/expressive/issues"
+  },
+  "dependencies": {
+    "@expressive/common": "workspace:^"
+  }
+}
