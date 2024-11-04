@@ -1,0 +1,19 @@
+{
+  "include": ["packages/**/*"],
+  "exclude": ["node_modules", "packages/**/test/*.ts"],
+  "compilerOptions": {
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "outDir": "dist",
+    "target": "ESNext",
+    "allowSyntheticDefaultImports": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ESNext"],
+    "types": ["node", "jest", "reflect-metadata"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  }
+}

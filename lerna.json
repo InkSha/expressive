@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/lerna/schemas/lerna-schema.json",
+  "version": "0.0.0",
+  "npmClient": "pnpm",
+  "packages": ["packages/*"],
+  "command": {
+    "create": {
+      "private": true,
+      "main": "src/index.ts",
+      "directories": {
+        "src": "src",
+        "test": "__test__"
+      },
+      "files": ["dist"]
+    }
+  }
+}
