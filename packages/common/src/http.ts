@@ -9,6 +9,8 @@ export enum StatusCode {
   SUCCESS = 200,
 
   NOT_FOUND = 404,
+
+  INTERNAL_SERVER_ERROR = 500,
 }
 
 /**
@@ -28,7 +30,7 @@ export enum RequestParam {
   NEXT = 2,
   BODY = 3,
   QUERY = 4,
-  PARAM = 5,
+  PARAMS = 5,
   HEADERS = 6,
 }
 

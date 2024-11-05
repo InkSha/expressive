@@ -6,6 +6,7 @@ import {
   HTTPException,
   StatusCode,
   TokenConfig,
+  RequestParam,
 } from "@expressive/common"
 import express from "express"
 
@@ -21,8 +22,8 @@ export class Router {
     for (const name of entityMethodNames) {
       const { fn, url, method, params, statusCode } = this.parseRouterFnData(entity, name, baseUrl)
 
-      this.router[HttpRequestName[method]](url, async (req, res) => {
-        const p = this.getParams(req, params)
+      this.router[HttpRequestName[method]](url, async (req, res, next) => {
+        const p = this.getParams(req, res, next, params)
 
         if (statusCode) res.status(statusCode)
 
@@ -33,16 +34,42 @@ export class Router {
     return this.router
   }
 
-  private getParams(req: express.Request, params?: ParamsInfo[]) {
+  private getParams(
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction,
+    params?: ParamsInfo[],
+  ) {
     const p = []
 
     if (params) {
       p.push(...new Array(Math.max(...params.map((v) => v.index))))
-      for (const { type, index, prototype } of params) {
-        p[index] = prototype ? req[type][prototype] : req[type]
+      for (const { type, index, property } of params) {
+        switch (type) {
+          case RequestParam.REQUEST:
+            p[index] = property ? req[property] : req
+            break
+          case RequestParam.RESPONSE:
+            p[index] = property ? res[property] : res
+            break
+          case RequestParam.NEXT:
+            p[index] = next
+            break
+          case RequestParam.BODY:
+            p[index] = property ? req.body[property] : req.body
+            break
+          case RequestParam.QUERY:
+            p[index] = property ? req.query[property] : req.query
+            break
+          case RequestParam.PARAMS:
+            p[index] = property ? req.params[property] : req.params
+            break
+          case RequestParam.HEADERS:
+            p[index] = property ? req.headers[property] : req.headers
+            break
+        }
       }
     }
-
     return p
   }
 
@@ -53,23 +80,16 @@ export class Router {
   }
 
   private async callHandle(fn: Function, caller: Object, params: unknown[]) {
-    const result = {
-      code: StatusCode.SUCCESS,
-      msg: "Success",
-      data: null,
-    }
     try {
-      const data = fn.call(caller, ...params)
-
-      result.data = data instanceof Promise ? await data : data
+      return fn.call(caller, ...params)
     } catch (e: unknown) {
       const isHTTPException = e instanceof HTTPException
-
-      result.code = isHTTPException ? e.code : StatusCode.NOT_FOUND
-      result.msg = isHTTPException ? e.message : "unknown error"
+      return {
+        code: isHTTPException ? e.code : StatusCode.INTERNAL_SERVER_ERROR,
+        msg: isHTTPException ? e.message : "unknown error",
+        data: null,
+      }
     }
-
-    return result
   }
 
   private parseRouterFnData(entity: Object, name: string, baseUrl = "/") {
@@ -77,7 +97,7 @@ export class Router {
     const url = this.join(baseUrl, Reflect.getMetadata(TokenConfig.Router, fn) as string)
     const method = Reflect.getMetadata(TokenConfig.RouterMethod, fn) as RequestType
     const params = Reflect.getMetadata(TokenConfig.Params, fn) as ParamsInfo[]
-    const statusCode = Reflect.getMetadata(TokenConfig.HttpStatus, fn) as StatusCode | undefined
+    const statusCode = Reflect.getMetadata(TokenConfig.HttpStatus, fn) as StatusCode
 
     return { fn, url, method, params, statusCode }
   }

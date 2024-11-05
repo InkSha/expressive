@@ -20,18 +20,13 @@ export class AppFactory {
       TokenConfig.Moudle,
       module,
     ) as ModuleConfig
-
-    const importProviders = imports
-      .flatMap((module) => this.parseModule(module))
-      .flatMap((config) => config.exports)
+    const importProviders = Array.from(new Set(imports.flatMap((m) => this.parseModule(m))))
 
     for (const controller of controllers) {
-      this.app.use(
-        this.parseController(controller, [...providers, ...Array.from(new Set(importProviders))]),
-      )
+      this.app.use(this.parseController(controller, [].concat(providers, importProviders)))
     }
 
-    return { exports }
+    return exports
   }
 
   private toEntity(proto: Constructor, providers: Constructor[] = []) {
@@ -60,11 +55,6 @@ export class AppFactory {
   }
 
   public start(port = 3000) {
-    this.app.use((req, res, next) => {
-      console.log(this.entity)
-      next()
-    })
-
     this.app.listen(port, () => {
       console.log("run")
     })

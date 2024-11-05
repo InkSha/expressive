@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from "@expressive/common"
+import { Controller, Get, Query } from "@expressive/common"
 import { UserService } from "./user.service"
 import { ArticleService } from "../article/article.service"
 
@@ -10,7 +10,7 @@ export class UserController {
   ) {}
 
   @Get("login")
-  public async Login(@Param("name") name: string, @Param("pwd") pwd: string) {
+  public async Login(@Query("name") name: string, @Query("pwd") pwd: string) {
     return this.service.login(name, pwd).then((pass) => {
       return {
         code: 200,
@@ -22,7 +22,7 @@ export class UserController {
   }
 
   @Get("articles")
-  public async getArticles(@Param("name") name: string) {
+  public async getArticles(@Query("name") name: string) {
     return {
       name,
       count: this.articles.count,
