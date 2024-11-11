@@ -51,7 +51,7 @@ export class Router {
       ),
     ).fill(undefined)
 
-    if (params) {
+    if (params.length) {
       for (const { type, index, property, proto } of params) {
         const has = hasValidator(proto)
 
