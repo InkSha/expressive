@@ -52,6 +52,15 @@ importers:
         specifier: workspace:^
         version: link:../shared
 
+  packages/config:
+    dependencies:
+      '@expressive/common':
+        specifier: workspace:^
+        version: link:../common
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.4.5
+
   packages/core:
     dependencies:
       '@expressive/common':
@@ -78,6 +87,9 @@ importers:
       '@expressive/common':
         specifier: workspace:^
         version: link:../common
+      '@expressive/config':
+        specifier: workspace:^
+        version: link:../config
       '@expressive/core':
         specifier: workspace:^
         version: link:../core

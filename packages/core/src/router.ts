@@ -44,12 +44,9 @@ export class Router {
     next: express.NextFunction,
     params: ParamsInfo[] = [],
   ) {
-    const p = new Array(
-      Math.max.apply(
-        Math,
-        params.map((v) => v.index),
-      ),
-    ).fill(undefined)
+    const p = new Array(Math.max.apply(Math, [0].concat(params.map((v) => v.index)))).fill(
+      undefined,
+    )
 
     if (params.length) {
       for (const { type, index, property, proto } of params) {

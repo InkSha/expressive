@@ -36,7 +36,8 @@ export class AppFactory {
   private toEntity(proto: Constructor, providers: Constructor[] = []) {
     if (this.entity.has(proto)) return this.entity.get(proto)
 
-    const args = Reflect.getMetadata("design:paramtypes", proto) as Constructor[]
+    // not constructor fn not have params
+    const args = (Reflect.getMetadata("design:paramtypes", proto) as Constructor[]) || []
 
     const params = args.map((fn) => {
       if (!providers.some((p) => p === fn)) {
