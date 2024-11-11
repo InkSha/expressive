@@ -7,7 +7,9 @@ import {
   StatusCode,
   TokenConfig,
   RequestParam,
+  BadRequestException,
 } from "@expressive/common"
+import { assignmentObject, hasValidator, parseDTO } from "@expressive/dto"
 import express from "express"
 
 export class Router {
@@ -23,11 +25,13 @@ export class Router {
       const { fn, url, method, params, statusCode } = this.parseRouterFnData(entity, name, baseUrl)
 
       this.router[HttpRequestName[method]](url, async (req, res, next) => {
-        const p = this.getParams(req, res, next, params)
-
         if (statusCode) res.status(statusCode)
-
-        this.callHandle(fn, entity, p).then((data) => res.send(data))
+        this.callHandle(() => {
+          const p = this.getParams(req, res, next, params)
+          return fn.apply(entity, p)
+        }).then((data) => {
+          res.send(data)
+        })
       })
     }
 
@@ -38,13 +42,19 @@ export class Router {
     req: express.Request,
     res: express.Response,
     next: express.NextFunction,
-    params?: ParamsInfo[],
+    params: ParamsInfo[] = [],
   ) {
-    const p = []
+    const p = new Array(
+      Math.max.apply(
+        Math,
+        params.map((v) => v.index),
+      ),
+    ).fill(undefined)
 
     if (params) {
-      p.push(...new Array(Math.max(...params.map((v) => v.index))))
-      for (const { type, index, property } of params) {
+      for (const { type, index, property, proto } of params) {
+        const has = hasValidator(proto)
+
         switch (type) {
           case RequestParam.REQUEST:
             p[index] = property ? req[property] : req
@@ -56,10 +66,18 @@ export class Router {
             p[index] = next
             break
           case RequestParam.BODY:
-            p[index] = property ? req.body[property] : req.body
+            p[index] = has
+              ? assignmentObject(proto, req.body)
+              : property
+                ? req.body[property]
+                : req.body
             break
           case RequestParam.QUERY:
-            p[index] = property ? req.query[property] : req.query
+            p[index] = has
+              ? assignmentObject(proto, req.query)
+              : property
+                ? req.query[property]
+                : req.query
             break
           case RequestParam.PARAMS:
             p[index] = property ? req.params[property] : req.params
@@ -67,6 +85,13 @@ export class Router {
           case RequestParam.HEADERS:
             p[index] = property ? req.headers[property] : req.headers
             break
+        }
+
+        if (has) {
+          const [pass, reason] = parseDTO(p[index])
+          if (!pass) {
+            throw new BadRequestException(reason)
+          }
         }
       }
     }
@@ -79,10 +104,10 @@ export class Router {
       : []
   }
 
-  private async callHandle(fn: Function, caller: Object, params: unknown[]) {
+  private async callHandle(fn: Function) {
     return new Promise((resolve, reject) => {
       try {
-        resolve(fn.call(caller, ...params))
+        resolve(fn())
       } catch (e: unknown) {
         reject(e)
       }
@@ -98,10 +123,10 @@ export class Router {
 
   private parseRouterFnData(entity: Object, name: string, baseUrl = "/") {
     const fn = entity[name] as (...args: unknown[]) => unknown
-    const url = this.join(baseUrl, Reflect.getMetadata(TokenConfig.Router, fn) as string)
-    const method = Reflect.getMetadata(TokenConfig.RouterMethod, fn) as RequestType
-    const params = Reflect.getMetadata(TokenConfig.Params, fn) as ParamsInfo[]
-    const statusCode = Reflect.getMetadata(TokenConfig.HttpStatus, fn) as StatusCode
+    const url = this.join(baseUrl, Reflect.getMetadata(TokenConfig.Router, entity, name) as string)
+    const method = Reflect.getMetadata(TokenConfig.RouterMethod, entity, name) as RequestType
+    const params = Reflect.getMetadata(TokenConfig.Params, entity, name) as ParamsInfo[]
+    const statusCode = Reflect.getMetadata(TokenConfig.HttpStatus, entity, name) as StatusCode
 
     return { fn, url, method, params, statusCode }
   }

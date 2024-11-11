@@ -8,12 +8,12 @@ type GenerateRouter = (type: RequestType) => Router
 type GenerateHTTPStatus = (code: StatusCode) => HTTPStatus
 
 const GenerateRouter: GenerateRouter = (type) => (url) => (target, name) => {
-  Reflect.defineMetadata(TokenConfig.RouterMethod, type, target[name])
-  Reflect.defineMetadata(TokenConfig.Router, url, target[name])
+  Reflect.defineMetadata(TokenConfig.RouterMethod, type, target, name)
+  Reflect.defineMetadata(TokenConfig.Router, url, target, name)
 }
 
 const GenerateHTTPStatus: GenerateHTTPStatus = (code) => () => (target, name) => {
-  Reflect.defineMetadata(TokenConfig.HttpStatus, code, target[name])
+  Reflect.defineMetadata(TokenConfig.HttpStatus, code, target, name)
 }
 
 export const Get = GenerateRouter(RequestType.GET)

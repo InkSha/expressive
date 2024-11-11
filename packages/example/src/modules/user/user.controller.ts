@@ -1,6 +1,7 @@
-import { Controller, Get, Query } from "@expressive/common"
+import { Body, Controller, Get, Post, Query } from "@expressive/common"
 import { UserService } from "./user.service"
 import { ArticleService } from "../article/article.service"
+import { UserInfoDTO } from "./dto/info.dto"
 
 @Controller("user")
 export class UserController {
@@ -27,6 +28,13 @@ export class UserController {
       name,
       count: this.articles.count,
       articles: this.articles.countArticles(name),
+    }
+  }
+
+  @Post("info")
+  public async getUserInfo(@Body() userInfo: UserInfoDTO) {
+    return {
+      userInfo,
     }
   }
 }

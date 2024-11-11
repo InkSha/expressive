@@ -9,3 +9,8 @@ export class NotFoundException extends HTTPException {
   public name = "NotFoundAssets"
   public code = StatusCode.NOT_FOUND
 }
+
+export class BadRequestException extends HTTPException {
+  public name = "BadRequest"
+  public code = StatusCode.BAD_REQUEST
+}

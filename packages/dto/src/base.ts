@@ -20,6 +20,10 @@ export class Validator {
     }
   }
 
+  public hasValidator(target: Object): boolean {
+    return this.object.has(target)
+  }
+
   public addValidator(
     target: Object,
     property: string | symbol,
@@ -75,3 +79,6 @@ export const parseDTO: Validator["validatorObject"] = (target) =>
 export const addValidator: Validator["addValidator"] = (target, property, config) => {
   new Validator().addValidator(target.constructor, property, config)
 }
+
+export const hasValidator: Validator["hasValidator"] = (target) =>
+  new Validator().hasValidator(target)

@@ -5,6 +5,7 @@ export interface ParamsInfo {
   property: string
   index: number
   type: RequestParam
+  proto: { new (): unknown }
 }
 
 export type Params = (property?: string) => ParameterDecorator
@@ -12,9 +13,10 @@ export type Params = (property?: string) => ParameterDecorator
 type GenerateParam = (type: RequestParam) => Params
 
 const GenerateParam: GenerateParam = (type) => (property?: string) => (target, key, index) => {
-  const data: ParamsInfo[] = Reflect.getMetadata(TokenConfig.Params, target[key]) ?? []
-  data.push({ type, index, property })
-  Reflect.defineMetadata(TokenConfig.Params, data, target[key])
+  const data: ParamsInfo[] = Reflect.getMetadata(TokenConfig.Params, target, key) ?? []
+  const proto = Reflect.getMetadata("design:paramtypes", target, key)[index]
+  data.push({ type, index, property, proto })
+  Reflect.defineMetadata(TokenConfig.Params, data, target, key)
 }
 
 export const Param = GenerateParam(RequestParam.PARAMS)
