@@ -80,16 +80,20 @@ export class Router {
   }
 
   private async callHandle(fn: Function, caller: Object, params: unknown[]) {
-    try {
-      return fn.call(caller, ...params)
-    } catch (e: unknown) {
+    return new Promise((resolve, reject) => {
+      try {
+        resolve(fn.call(caller, ...params))
+      } catch (e: unknown) {
+        reject(e)
+      }
+    }).catch((e: unknown) => {
       const isHTTPException = e instanceof HTTPException
       return {
         code: isHTTPException ? e.code : StatusCode.INTERNAL_SERVER_ERROR,
         msg: isHTTPException ? e.message : "unknown error",
         data: null,
       }
-    }
+    })
   }
 
   private parseRouterFnData(entity: Object, name: string, baseUrl = "/") {

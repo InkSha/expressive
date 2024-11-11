@@ -24,6 +24,9 @@
     "url": "https://github.com/InkSha/expressive/issues"
   },
   "dependencies": {
-    "@expressive/common": "workspace:^"
+    "@expressive/common": "workspace:^",
+    "@expressive/dto": "workspace:^",
+    "@types/cors": "^2.8.17",
+    "cors": "^2.8.5"
   }
 }

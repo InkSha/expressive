@@ -1,6 +1,7 @@
 import "reflect-metadata"
 import { type Constructor, type ModuleConfig, TokenConfig } from "@expressive/common"
 import express from "express"
+import cors from "cors"
 import { Router } from "./router"
 
 export class AppFactory {
@@ -8,6 +9,9 @@ export class AppFactory {
   private entity: Map<Constructor, Object> = new Map()
 
   constructor(module: Constructor) {
+    this.app.use(cors())
+    this.app.use(express.urlencoded({ extended: true }))
+    this.app.use(express.json())
     this.parseModule(module)
   }
 
