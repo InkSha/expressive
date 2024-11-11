@@ -1,7 +1,20 @@
-import { addValidator } from "./base"
-import { notEmpty, type NotEmptyConfig } from "./notEmpty"
+import { addValidator, type BaseConfig } from "./base"
 
-export const IsOptional = (): PropertyDecorator => (target, property) => {
-  const config: NotEmptyConfig = { ignoreUndefined: true }
-  addValidator(target, property, { config, verify: notEmpty, first: 999, skipOtherValidator: true })
+export type IsOptionalConfig = Partial<{}>
+
+export const isOptional: BaseConfig<IsOptionalConfig>["verify"] = (val, config) => {
+  if (val === undefined) return [true, "", ""]
+  return [false, "val defined", ""]
 }
+
+export const IsOptional =
+  (config?: IsOptionalConfig): PropertyDecorator =>
+  (target, property) => {
+    addValidator(target, property, {
+      config,
+      verify: isOptional,
+      first: 999,
+      failureContinue: true,
+      skipOtherValidator: true,
+    })
+  }

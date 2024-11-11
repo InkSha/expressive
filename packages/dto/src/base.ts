@@ -5,6 +5,7 @@ export interface BaseConfig<C = Record<string, unknown>> {
   verify: (val: unknown, config: C) => [boolean, string, string]
   reason?: Record<keyof C, string>
   first?: number
+  failureContinue?: boolean
   skipOtherValidator?: boolean
 }
 
@@ -32,13 +33,14 @@ export class Validator {
       reason = {},
       first = 0,
       verify = () => [true, "", ""],
+      failureContinue = false,
       skipOtherValidator = false,
     }: BaseConfig,
   ) {
     const map = this.object.get(target) || new Map()
     const validators: BaseConfig[] = map.has(property) ? map.get(property) : []
 
-    validators.push({ config, reason, verify, first, skipOtherValidator })
+    validators.push({ config, reason, verify, first, skipOtherValidator, failureContinue })
     map.set(property, validators)
     this.object.set(target, map)
   }
@@ -48,15 +50,20 @@ export class Validator {
       const validators = this.object.get(target.constructor)
 
       for (const [property, configs] of validators.entries()) {
-        for (const { verify, config, reason = {}, skipOtherValidator } of configs.sort(
-          (a, b) => b.first - a.first,
-        )) {
+        for (const {
+          verify,
+          config,
+          reason = {},
+          skipOtherValidator,
+          failureContinue,
+        } of configs.sort((a, b) => b.first - a.first)) {
           const [pass, msg, key] = verify(target[property], config)
 
-          if (!pass) {
+          if (!pass && !failureContinue) {
             return [pass, key in reason ? reason[key] : `${String(property)} ${msg}`]
           }
-          if (skipOtherValidator) {
+
+          if (pass && skipOtherValidator) {
             break
           }
         }

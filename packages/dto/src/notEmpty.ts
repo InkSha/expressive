@@ -29,10 +29,8 @@ export const notEmpty: BaseConfig<NotEmptyConfig>["verify"] = (
       return buildInfo("should not zero", "ignoreZero")
     }
 
-    const str = JSON.stringify(val)
-
     if (
-      [JSON.stringify([]), JSON.stringify({}), JSON.stringify("")].includes(str) &&
+      [JSON.stringify([]), JSON.stringify({}), JSON.stringify("")].includes(JSON.stringify(val)) &&
       !config.ignoreEmpty
     ) {
       return buildInfo("is empty", "ignoreEmpty")
