@@ -1,6 +1,6 @@
 import { config } from "dotenv"
 import fs from "node:fs"
-import { Injectable, Module } from "@expressive/common"
+import { Globals, Injectable, Module } from "@expressive/common"
 import path from "node:path"
 
 @Injectable()
@@ -21,6 +21,7 @@ export class ConfigService {
   }
 }
 
+@Globals()
 @Module({
   providers: [ConfigService],
   exports: [ConfigService],

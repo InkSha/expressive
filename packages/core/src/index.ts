@@ -7,6 +7,9 @@ import { Router } from "./router"
 export class AppFactory {
   private readonly app = express()
   private entity: Map<Constructor, Object> = new Map()
+  private globals = {
+    providers: new Set<Constructor>()
+  }
 
   constructor(module: Constructor) {
     this.app.use(cors())
@@ -20,17 +23,33 @@ export class AppFactory {
       throw new TypeError(`${module.name} Not Module!`)
     }
 
+    const isGlobal = this.judgeIsGlobal(module)
+
     const { providers, controllers, imports, exports } = Reflect.getMetadata(
       TokenConfig.Moudle,
       module,
     ) as ModuleConfig
-    const importProviders = Array.from(new Set(imports.flatMap((m) => this.parseModule(m))))
 
-    for (const controller of controllers) {
-      this.app.use(this.parseController(controller, [].concat(providers, importProviders)))
+    const importProviders = Array.from(new Set(imports.sort((a, b) => {
+      if (this.judgeIsGlobal(a)) return -1
+      if (this.judgeIsGlobal(b)) return 1
+      return 0
+    }).flatMap((m) => this.parseModule(m))))
+
+    if (isGlobal) {
+      exports.map(provider => this.globals.providers.add(provider))
     }
 
+    for (const controller of controllers) {
+      this.app.use(this.parseController(controller, [].concat(providers, importProviders, Array.from(this.globals.providers))))
+    }
+
+
     return exports
+  }
+
+  private judgeIsGlobal(module: Constructor) {
+    return Reflect.hasMetadata(TokenConfig.Global, module) && Reflect.getMetadata(TokenConfig.Global, module)
   }
 
   private toEntity(proto: Constructor, providers: Constructor[] = []) {
@@ -38,7 +57,6 @@ export class AppFactory {
 
     // not constructor fn not have params
     const args = (Reflect.getMetadata("design:paramtypes", proto) as Constructor[]) || []
-
     const params = args.map((fn) => {
       if (!providers.some((p) => p === fn)) {
         throw new EvalError(`${fn.name} not in providers`)
