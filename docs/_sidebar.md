@@ -1,4 +1,5 @@
 * [首页](/)
+* [元数据](metadata.md)
 * [控制器](controller.md)
 * [提供者](provider.md)
 * [模块化](module.md)
