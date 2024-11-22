@@ -6,5 +6,9 @@ export const TokenConfig = {
   Params: "__PARAMS__",
   Injectable: "__INJECTABLE__",
   HttpStatus: "__HTTP_STATUS__",
-  Global: "__GLOBAL__"
+  Global: "__GLOBAL__",
+  ModuleControllers: "__MODULE_CONTROLLERS__",
+  ModuleProviders: "__MODULE_PROVIDERS__",
+  ModuleExports: "__MODULE_EXPORTS__",
+  ModuleImports: "__MODULE_IMPORTS__",
 } as const satisfies Record<string, `__${string}__`>

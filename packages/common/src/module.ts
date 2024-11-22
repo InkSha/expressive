@@ -14,12 +14,18 @@ export type Module = (config?: Partial<ModuleConfig>) => ClassDecorator
 export const Module: Module =
   (config = {}) =>
     (target) => {
-      config.controllers ??= []
-      config.providers ??= []
-      config.exports ??= []
-      config.imports ??= []
+      const {
+        controllers = [],
+        providers = [],
+        exports = [],
+        imports = []
+      } = config
 
-      Reflect.defineMetadata(TokenConfig.Moudle, config, target)
+      Reflect.defineMetadata(TokenConfig.Moudle, true, target)
+      Reflect.defineMetadata(TokenConfig.ModuleControllers, controllers, target)
+      Reflect.defineMetadata(TokenConfig.ModuleProviders, providers, target)
+      Reflect.defineMetadata(TokenConfig.ModuleExports, exports, target)
+      Reflect.defineMetadata(TokenConfig.ModuleImports, imports, target)
     }
 
 export type Globals = () => ClassDecorator
