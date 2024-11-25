@@ -7,7 +7,7 @@ export class Entities {
     return Entities.entities.size
   }
 
-  public toEntity(proto: Constructor, providers: Constructor[] = []) {
+  public toEntity(proto: Constructor, providers: Constructor[] = []): Object {
     if (this.hasEntity(proto)) return this.getEntity(proto)
 
     const args = (Reflect.getMetadata("design:paramtypes", proto) as Constructor[]) || []
