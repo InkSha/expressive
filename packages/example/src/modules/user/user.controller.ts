@@ -5,7 +5,7 @@ import { UserInfoDTO } from "./dto/info.dto"
 import { ConfigService } from "@expressive/config"
 import { Auth, Logger } from '../../middlewares'
 
-@UseMiddleware(Logger, Auth)
+@UseMiddleware(Logger)
 @Controller("user")
 export class UserController {
   constructor(
@@ -27,6 +27,7 @@ export class UserController {
   }
 
   @Get("articles")
+  @UseMiddleware(Auth)
   public async getArticles(@Query("name") name: string) {
     return {
       name,
