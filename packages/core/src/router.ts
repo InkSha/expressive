@@ -26,7 +26,7 @@ export class Router {
     for (const name of entityMethodNames) {
       const { fn, url, method, params, statusCode, middlewares: routerMiddlewares = [] } = this.parseRouterFnData(entity, name, baseUrl)
 
-      this.router[HttpRequestName[method]](url, [].concat(
+      this.router[HttpRequestName[method]](url,
         baseMiddlewares
           .concat(routerMiddlewares)
           .map(Middleware => new Middleware().use),
@@ -39,7 +39,7 @@ export class Router {
             res.send(data)
           })
         }
-      ))
+      )
     }
 
     return this.router
