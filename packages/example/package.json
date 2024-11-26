@@ -27,7 +27,6 @@
     "@expressive/common": "workspace:^",
     "@expressive/config": "workspace:^",
     "@expressive/core": "workspace:^",
-    "@expressive/dto": "workspace:^",
-    "@expressive/middleware": "workspace:^"
+    "@expressive/dto": "workspace:^"
   }
 }
