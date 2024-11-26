@@ -4,6 +4,7 @@ import { ArticleService } from "../article/article.service"
 import { UserInfoDTO } from "./dto/info.dto"
 import { ConfigService } from "@expressive/config"
 import { Auth, Logger } from '../../middlewares'
+import { TransformInt } from '../../pipes/transformInt'
 
 @UseMiddleware(Logger)
 @Controller("user")
@@ -24,6 +25,11 @@ export class UserController {
         msg: pass ? "success" : "failure",
       }
     })
+  }
+
+  @Get('search')
+  public async searchUser(@Query(new TransformInt('id')) id: number) {
+    return { id, type: typeof id }
   }
 
   @Get("articles")

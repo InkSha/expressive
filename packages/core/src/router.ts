@@ -55,48 +55,40 @@ export class Router {
       undefined,
     )
 
+    const param = {
+      [RequestParam.REQUEST]: req,
+      [RequestParam.RESPONSE]: res,
+      [RequestParam.NEXT]: next,
+      [RequestParam.BODY]: req.body,
+      [RequestParam.QUERY]: req.query,
+      [RequestParam.PARAMS]: req.params,
+      [RequestParam.HEADERS]: req.headers,
+    }
+
     if (params.length) {
-      for (const { type, index, property, proto } of params) {
+      for (const { type, index, property, proto, pipes } of params) {
         const has = hasValidator(proto)
 
-        switch (type) {
-          case RequestParam.REQUEST:
-            p[index] = property ? req[property] : req
-            break
-          case RequestParam.RESPONSE:
-            p[index] = property ? res[property] : res
-            break
-          case RequestParam.NEXT:
-            p[index] = next
-            break
-          case RequestParam.BODY:
-            p[index] = has
-              ? assignmentObject(proto, req.body)
-              : property
-                ? req.body[property]
-                : req.body
-            break
-          case RequestParam.QUERY:
-            p[index] = has
-              ? assignmentObject(proto, req.query)
-              : property
-                ? req.query[property]
-                : req.query
-            break
-          case RequestParam.PARAMS:
-            p[index] = property ? req.params[property] : req.params
-            break
-          case RequestParam.HEADERS:
-            p[index] = property ? req.headers[property] : req.headers
-            break
+        if (type in param) {
+          p[index] = param[type]
         }
 
         if (has) {
+          if (typeof p[index] === 'object') {
+            if (has) {
+              p[index] = assignmentObject(proto, p[index])
+            }
+            else if (property) {
+              p[index] = p[index][property]
+            }
+          }
+
           const [pass, reason] = parseDTO(p[index])
           if (!pass) {
             throw new BadRequestException(reason)
           }
         }
+        p[index] = pipes.reduce((value, pipe) => pipe.transform(value), p[index])
       }
     }
     return p
