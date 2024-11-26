@@ -1,6 +1,6 @@
 import { TokenConfig } from "./token"
 
-export type Constructor = new (...args: unknown[]) => {}
+export type Constructor<R = {}> = new (...args: unknown[]) => R
 
 export type ModuleConfig = {
   controllers: Constructor[]

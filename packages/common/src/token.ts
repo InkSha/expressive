@@ -11,4 +11,5 @@ export const TokenConfig = {
   ModuleProviders: "__MODULE_PROVIDERS__",
   ModuleExports: "__MODULE_EXPORTS__",
   ModuleImports: "__MODULE_IMPORTS__",
+  ModuleMiddleware: "__MODULE_MIDDLEWARE__",
 } as const satisfies Record<string, `__${string}__`>

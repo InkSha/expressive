@@ -2,6 +2,7 @@ import {
   type Constructor,
   type ParamsInfo,
   type RequestType,
+  type Middleware,
   HttpRequestName,
   HTTPException,
   StatusCode,
@@ -10,7 +11,7 @@ import {
   BadRequestException,
 } from "@expressive/common"
 import { assignmentObject, hasValidator, parseDTO } from "@expressive/dto"
-import express from "express"
+import express, { NextFunction, Request, Response } from "express"
 
 export class Router {
   private readonly router = express.Router()
@@ -20,19 +21,25 @@ export class Router {
   public bindRouter(entity: Object) {
     const baseUrl = Reflect.getMetadata(TokenConfig.Controller, this.controller)
     const entityMethodNames = this.getMethodList(this.controller)
+    const baseMiddlewares = (Reflect.getMetadata(TokenConfig.ModuleMiddleware, this.controller) || []) as Array<Constructor<Middleware>>
 
     for (const name of entityMethodNames) {
-      const { fn, url, method, params, statusCode } = this.parseRouterFnData(entity, name, baseUrl)
+      const { fn, url, method, params, statusCode, middlewares: routerMiddlewares = [] } = this.parseRouterFnData(entity, name, baseUrl)
 
-      this.router[HttpRequestName[method]](url, async (req, res, next) => {
-        if (statusCode) res.status(statusCode)
-        this.callHandle(() => {
-          const p = this.getParams(req, res, next, params)
-          return fn.apply(entity, p)
-        }).then((data) => {
-          res.send(data)
-        })
-      })
+      this.router[HttpRequestName[method]](url, [].concat(
+        baseMiddlewares
+          .concat(routerMiddlewares)
+          .map(Middleware => new Middleware().use),
+        async (req: Request, res: Response, next: NextFunction) => {
+          if (statusCode) res.status(statusCode)
+          this.callHandle(() => {
+            const p = this.getParams(req, res, next, params)
+            return fn.apply(entity, p)
+          }).then((data) => {
+            res.send(data)
+          })
+        }
+      ))
     }
 
     return this.router
@@ -124,8 +131,9 @@ export class Router {
     const method = Reflect.getMetadata(TokenConfig.RouterMethod, entity, name) as RequestType
     const params = Reflect.getMetadata(TokenConfig.Params, entity, name) as ParamsInfo[]
     const statusCode = Reflect.getMetadata(TokenConfig.HttpStatus, entity, name) as StatusCode
+    const middlewares = Reflect.getMetadata(TokenConfig.ModuleMiddleware, entity, name) as Array<Constructor<Middleware>>
 
-    return { fn, url, method, params, statusCode }
+    return { fn, url, method, params, statusCode, middlewares }
   }
 
   private join(...urls: string[]) {

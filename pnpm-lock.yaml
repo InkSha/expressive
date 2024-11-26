@@ -96,6 +96,15 @@ importers:
       '@expressive/dto':
         specifier: workspace:^
         version: link:../dto
+      '@expressive/middleware':
+        specifier: workspace:^
+        version: link:../middleware
+
+  packages/middleware:
+    dependencies:
+      '@expressive/common':
+        specifier: workspace:^
+        version: link:../common
 
   packages/shared: {}
 

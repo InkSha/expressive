@@ -1,4 +1,6 @@
+import { Middleware } from './base'
 import { StatusCode, RequestType } from "./http"
+import { Constructor } from './module'
 import { TokenConfig } from "./token"
 
 export type Router = (url?: string) => MethodDecorator
@@ -24,3 +26,9 @@ export const Delete = GenerateRouter(RequestType.DELETE)
 
 export const Success = GenerateHTTPStatus(StatusCode.SUCCESS)
 export const NotFound = GenerateHTTPStatus(StatusCode.NOT_FOUND)
+
+export type UseMiddleware = (...middlewares: Constructor<Middleware>[]) => ClassDecorator & MethodDecorator
+export const UseMiddleware: UseMiddleware = (...middlewares) => (target: Object, property?: string | symbol) => {
+  const old = Reflect.getMetadata(TokenConfig.ModuleMiddleware, target, property) || []
+  Reflect.defineMetadata(TokenConfig.ModuleMiddleware, [].concat(old, middlewares), target, property)
+}

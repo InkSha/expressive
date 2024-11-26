@@ -1,9 +1,11 @@
-import { Body, Controller, Get, Post, Query } from "@expressive/common"
+import { Body, Controller, Get, Post, Query, UseMiddleware } from "@expressive/common"
 import { UserService } from "./user.service"
 import { ArticleService } from "../article/article.service"
 import { UserInfoDTO } from "./dto/info.dto"
 import { ConfigService } from "@expressive/config"
+import { Auth, Logger } from '../../middlewares'
 
+@UseMiddleware(Logger, Auth)
 @Controller("user")
 export class UserController {
   constructor(
