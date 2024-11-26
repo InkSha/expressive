@@ -1,105 +1,5 @@
 import { Constructor, ModuleConfig, TokenConfig } from '@expressive/common'
 
-export class ModuleNode {
-  public static root: ModuleNode | null = null
-  public static globals = {
-    providers: new Map<Constructor, ModuleNode>()
-  }
-
-  private node: AppModule
-  private children: ModuleNode[] = []
-
-  constructor(
-    module: Constructor
-  ) {
-    this.node = new AppModule(module)
-
-    if (!ModuleNode.root) {
-      ModuleNode.root = this
-    }
-
-    this.mount()
-  }
-
-  private mount() {
-    if (!this.node.imports.length) {
-      return
-    }
-
-    for (const module of this.node.imports) {
-      if (!this.hasModule(module) && !this.hasGlobals(module)) {
-        const m = new ModuleNode(module)
-
-        if (m.node.global) {
-          ModuleNode.globals.providers.set(module, m)
-        }
-        else this.children.push(m)
-      }
-    }
-  }
-
-  private static injectGlobal(module: ModuleNode, globals: ModuleNode[]) {
-    module.node.injectGlobalsImport(globals)
-
-    for (const leaf of module) {
-      ModuleNode.injectGlobal(leaf, globals)
-    }
-  }
-
-  public getTree() {
-    return ModuleNode.getTree()
-  }
-
-  public static getTree() {
-    if (ModuleNode.root) {
-      ModuleNode.injectGlobal(ModuleNode.root, Array.from(ModuleNode.globals.providers.values()))
-    }
-
-    return ModuleNode.root
-  }
-
-  public hasGlobals(module: Constructor): boolean {
-    return ModuleNode.globals.providers.has(module)
-  }
-
-  public hasModule(module: Constructor): boolean {
-    if (this.prototype === module) return true
-
-    for (const leaf of this) {
-      if (leaf.hasModule(module)) {
-        return true
-      }
-    }
-
-    return false
-  }
-
-  public get module() {
-    return this.node
-  }
-
-  public get prototype() {
-    return this.node.prototype
-  }
-
-  public [Symbol.iterator]() {
-    let index = 0
-    const list = this.children
-    return {
-      next: () => {
-        return index < list.length
-          ? ({ value: list[index++], done: false })
-          : ({ value: null, done: true })
-      }
-    }
-  }
-
-  public toString() {
-    return this.node.name
-  }
-}
-
-
 export class AppModule implements ModuleConfig {
 
   public readonly global: boolean
@@ -131,8 +31,13 @@ export class AppModule implements ModuleConfig {
     AppModule.Modules.set(module, this)
   }
 
-  public injectGlobalsImport(imports: ModuleNode[]) {
-    this.providers = imports.flatMap(module => module.module.providers)
+  public static getInstance(module: Constructor) {
+    const has = AppModule.Modules.has(module)
+    return has ? AppModule.Modules.get(module) : new AppModule(module)
+  }
+
+  public injectGlobalsImport(imports: AppModule[]) {
+    this.providers = imports.flatMap(module => module.providers)
     this.providers = this.imports.flatMap(m => AppModule.Modules.get(m).exports)
     this.imports = imports.map(module => module.prototype)
   }

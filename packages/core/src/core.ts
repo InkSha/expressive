@@ -3,7 +3,7 @@ import { type Constructor } from "@expressive/common"
 import express from "express"
 import cors from "cors"
 import { Entities } from './entities'
-import { ModuleNode } from './module'
+import { ModuleNode } from './node'
 import { Router } from './router'
 
 export class AppCore {
