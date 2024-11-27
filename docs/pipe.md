@@ -151,6 +151,105 @@ const GenerateParam: GenerateParam = (type) => (property?: string | Pipe, ...pip
 // ...
 ```
 
-访问 [本地地址](localhost:3000/user/search?id=123) 可以发现传递的 id 123 被自动转换成了数字。
+访问 [本地地址](http://localhost:3000/user/search?id=123) 可以发现传递的 id 123 被自动转换成了数字。
 
 而如果传递的是非数字，则会被自动转换为 -1 。
+
+## 拆分 DTO 验证
+
+我们的 DTO 验证目前是自动集成在路由内部的。
+
+这并不是很好，增加了包的体积和使用者的负担。
+
+因此我们需要将它拆分出来，作为一个可选的包。
+
+### 重新修改 `Router.getParams`
+
+将 DTO 的验证逻辑全部移除。
+
+```ts
+private getParams(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction,
+  params: ParamsInfo[] = [],
+) {
+  const p = new Array(Math.max.apply(Math, [0].concat(params.map((v) => v.index)))).fill(
+    undefined,
+  )
+
+  const param = {
+    [RequestParam.REQUEST]: req,
+    [RequestParam.RESPONSE]: res,
+    [RequestParam.NEXT]: next,
+    [RequestParam.BODY]: req.body,
+    [RequestParam.QUERY]: req.query,
+    [RequestParam.PARAMS]: req.params,
+    [RequestParam.HEADERS]: req.headers,
+  }
+
+  if (params.length) {
+    for (const { type, index, property, proto, pipes } of params) {
+
+      if (type in param) {
+        p[index] = param[type]
+      }
+
+      if (typeof p[index] === 'object' && property) {
+        p[index] = p[index][property]
+      }
+
+      p[index] = pipes.reduce((value, pipe) => pipe.transform(value, proto), p[index])
+    }
+  }
+  return p
+}
+```
+
+### 新增 DTO 管道
+
+需要注意的是，因为需要判断 DTO 类，因此这里将参数的类型原型传入了。
+
+```ts
+// 同步修改 Pipe 基类
+export abstract class Pipe<R = unknown, V = unknown> {
+  public abstract transform(value: V, proto: Constructor): R
+}
+```
+
+```ts
+export class DTOPipe extends Pipe<Object, Object> {
+  public transform(value: Object, proto: Constructor): Object {
+    const has = hasValidator(proto)
+    let data = value
+
+    if (has) {
+      if (typeof value === 'object') {
+        if (has) {
+          data = assignmentObject(proto, value)
+        }
+      }
+
+      const [pass, reason] = parseDTO(data)
+      if (!pass) {
+        throw new BadRequestException(reason)
+      }
+    }
+
+    return data
+  }
+}
+```
+
+引入 DTO 的验证管道。
+
+```ts
+@Post("info")
+public async getUserInfo(@Body(new DTOPipe()) userInfo: UserInfoDTO) {
+  return {
+    userInfo,
+  }
+}
+```
+
+完成以上步骤后，我们就完成了将 DTO 包拆分出来这一操作了。
