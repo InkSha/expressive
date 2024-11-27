@@ -8,9 +8,7 @@ import {
   StatusCode,
   TokenConfig,
   RequestParam,
-  BadRequestException,
 } from "@expressive/common"
-import { assignmentObject, hasValidator, parseDTO } from "@expressive/dto"
 import express, { NextFunction, Request, Response } from "express"
 
 export class Router {
@@ -67,28 +65,16 @@ export class Router {
 
     if (params.length) {
       for (const { type, index, property, proto, pipes } of params) {
-        const has = hasValidator(proto)
 
         if (type in param) {
           p[index] = param[type]
         }
 
-        if (has) {
-          if (typeof p[index] === 'object') {
-            if (has) {
-              p[index] = assignmentObject(proto, p[index])
-            }
-            else if (property) {
-              p[index] = p[index][property]
-            }
-          }
-
-          const [pass, reason] = parseDTO(p[index])
-          if (!pass) {
-            throw new BadRequestException(reason)
-          }
+        if (typeof p[index] === 'object' && property) {
+          p[index] = p[index][property]
         }
-        p[index] = pipes.reduce((value, pipe) => pipe.transform(value), p[index])
+
+        p[index] = pipes.reduce((value, pipe) => pipe.transform(value, proto), p[index])
       }
     }
     return p

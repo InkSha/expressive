@@ -5,6 +5,7 @@ import { UserInfoDTO } from "./dto/info.dto"
 import { ConfigService } from "@expressive/config"
 import { Auth, Logger } from '../../middlewares'
 import { TransformInt } from '../../pipes/transformInt'
+import { DTOPipe } from '@expressive/dto'
 
 @UseMiddleware(Logger)
 @Controller("user")
@@ -43,7 +44,7 @@ export class UserController {
   }
 
   @Post("info")
-  public async getUserInfo(@Body() userInfo: UserInfoDTO) {
+  public async getUserInfo(@Body(new DTOPipe()) userInfo: UserInfoDTO) {
     return {
       userInfo,
     }
