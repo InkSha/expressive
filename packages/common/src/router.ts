@@ -1,4 +1,4 @@
-import { Middleware } from './base'
+import { Middleware, Pipe } from './base'
 import { StatusCode, RequestType } from "./http"
 import { Constructor } from './module'
 import { TokenConfig } from "./token"
@@ -31,4 +31,10 @@ export type UseMiddleware = (...middlewares: Constructor<Middleware>[]) => Class
 export const UseMiddleware: UseMiddleware = (...middlewares) => (target: Object, property?: string | symbol) => {
   const old = Reflect.getMetadata(TokenConfig.ModuleMiddleware, target, property) || []
   Reflect.defineMetadata(TokenConfig.ModuleMiddleware, [].concat(old, middlewares), target, property)
+}
+
+export type UsePipe = (...pipes: Pipe[]) => ClassDecorator
+export const UsePipe: UsePipe = (...pipes) => target => {
+  const oldPipes: Pipe[] = Reflect.getMetadata(TokenConfig.RouterPipe, target) || []
+  Reflect.defineMetadata(TokenConfig.RouterPipe, oldPipes.concat(pipes), target)
 }

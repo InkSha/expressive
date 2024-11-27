@@ -2,12 +2,13 @@ import {
   type Constructor,
   type ParamsInfo,
   type RequestType,
-  type Middleware,
   HttpRequestName,
   HTTPException,
   StatusCode,
   TokenConfig,
   RequestParam,
+  Middleware,
+  Pipe,
 } from "@expressive/common"
 import express, { NextFunction, Request, Response } from "express"
 
@@ -20,6 +21,7 @@ export class Router {
     const baseUrl = Reflect.getMetadata(TokenConfig.Controller, this.controller)
     const entityMethodNames = this.getMethodList(this.controller)
     const baseMiddlewares = (Reflect.getMetadata(TokenConfig.ModuleMiddleware, this.controller) || []) as Array<Constructor<Middleware>>
+    const basePipes = (Reflect.getMetadata(TokenConfig.RouterPipe, this.controller) || []) as Array<Pipe>
 
     for (const name of entityMethodNames) {
       const { fn, url, method, params, statusCode, middlewares: routerMiddlewares = [] } = this.parseRouterFnData(entity, name, baseUrl)
@@ -31,7 +33,7 @@ export class Router {
         async (req: Request, res: Response, next: NextFunction) => {
           if (statusCode) res.status(statusCode)
           this.callHandle(() => {
-            const p = this.getParams(req, res, next, params)
+            const p = this.getParams(req, res, next, params, basePipes)
             return fn.apply(entity, p)
           }).then((data) => {
             res.send(data)
@@ -48,6 +50,7 @@ export class Router {
     res: express.Response,
     next: express.NextFunction,
     params: ParamsInfo[] = [],
+    basePipes: Pipe[] = []
   ) {
     const p = new Array(Math.max.apply(Math, [0].concat(params.map((v) => v.index)))).fill(
       undefined,
@@ -74,7 +77,7 @@ export class Router {
           p[index] = p[index][property]
         }
 
-        p[index] = pipes.reduce((value, pipe) => pipe.transform(value, proto), p[index])
+        p[index] = basePipes.concat(pipes).reduce((value, pipe) => pipe.transform(value, proto), p[index])
       }
     }
     return p
