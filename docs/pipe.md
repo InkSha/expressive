@@ -253,3 +253,58 @@ public async getUserInfo(@Body(new DTOPipe()) userInfo: UserInfoDTO) {
 ```
 
 完成以上步骤后，我们就完成了将 DTO 包拆分出来这一操作了。
+
+## 全局管道
+
+以 DTO 校验为例，在项目中我们会经常进行校验参数。
+
+如果一个个的去增加管道，那么会显得非常繁琐。
+
+这时，我们就可以将这个管道给提升到全局去。让框架来帮助我们将管道给应用到各个路由。
+
+### 控制器局部管道
+
+众所周知，互联网其实是一个巨大的局域网。
+
+因此，若想实现全局管道，我们就需要首先实现局部的管道。
+
+我们将实现一个装饰器，它会将我们的管道给应用在控制器级别。
+即会给控制器的所有路由都应用传入的管道。
+
+```ts
+export type UsePipe = (...pipes: Pipe[]) => ClassDecorator
+export const UsePipe: UsePipe = (...pipes) => target => {
+  const oldPipes: Pipe[] = Reflect.getMetadata(TokenConfig.RouterPipe, target) || []
+  Reflect.defineMetadata(TokenConfig.RouterPipe, oldPipes.concat(pipes), target)
+}
+```
+
+### 改造 `Router`
+
+```ts
+class Router {
+  public bindRouter(entity: Object) {
+    // ...
+    // 取出局部管道
+    const basePipes = (Reflect.getMetadata(TokenConfig.RouterPipe, this.controller) || []) as Array<Pipe>
+
+    // ...
+    const p = this.getParams(req, res, next, params, basePipes)
+    // ...
+  }
+
+  private getParams(
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction,
+    params: ParamsInfo[] = [],
+    basePipes: Pipe[] = []
+  ) {
+    // ...
+    // 在此处将控制器级别的管道和路由本身的管道一起使用
+    // 将优先处理控制器级别管道
+    p[index] = basePipes.concat(pipes).reduce((value, pipe) => pipe.transform(value, proto), p[index])
+    // ...
+  }
+}
+```
