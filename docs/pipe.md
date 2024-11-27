@@ -254,15 +254,13 @@ public async getUserInfo(@Body(new DTOPipe()) userInfo: UserInfoDTO) {
 
 完成以上步骤后，我们就完成了将 DTO 包拆分出来这一操作了。
 
-## 全局管道
+### 控制器局部管道
 
 以 DTO 校验为例，在项目中我们会经常进行校验参数。
 
 如果一个个的去增加管道，那么会显得非常繁琐。
 
 这时，我们就可以将这个管道给提升到全局去。让框架来帮助我们将管道给应用到各个路由。
-
-### 控制器局部管道
 
 众所周知，互联网其实是一个巨大的局域网。
 
@@ -308,3 +306,235 @@ class Router {
   }
 }
 ```
+
+## 实现全局 `Provider`
+
+完成以上步骤后，我们将得到一个可使用的局部的管道功能。
+
+现在，我们将实现全局的管道功能。
+
+我们选择的全局方案为在根模块定义和声明全局 `provider`。
+
+```ts
+@Module({
+  imports: [UserModule, ConfigModule],
+  providers: [
+    // 将在根模块声明全局 providers
+    { type: ProviderType.PIPE, provider: DTOPipe },
+    { type: ProviderType.MIDDLEWARE, provider: Logger }
+  ]
+})
+export class AppModule {}
+```
+
+### 改造模块装饰器
+
+为了传递全局的 `provider`, 我们需要首先改造模块装饰器，以便应用到类型标注。
+
+先声明对应的 `Provider` 类型。
+
+```ts
+// ProviderType 暂时仅用于区分类别
+// 无其他作用
+export enum ProviderType {
+  SERVICE = 0,
+  PIPE = 2,
+  MIDDLEWARE = 4,
+  GUARD = 8,
+  INTERCEPT = 16,
+  FILTER = 32,
+}
+
+export type Provider = { type: ProviderType, provider: Constructor }
+```
+
+接着修改 `ModuleConfig`。
+
+```ts
+export type ModuleConfig = {
+  controllers: Constructor[]
+  // 可以是 [Serivce], 也可以是 [{ type: ProviderType.Service, provider: Service }]
+  providers: (Provider | Constructor)[]
+  imports: Constructor[]
+  exports: Constructor[]
+}
+```
+
+然后修改装饰器内部。
+
+```ts
+// ...
+// 修改 providers 的数据
+Reflect.defineMetadata(TokenConfig.ModuleProviders, providers
+  .map(provider =>
+    // 如果是一个函数 则 代表不是 Provider 类型 而是 Constructor 类型
+    // 使用 Provider 包装它
+    typeof provider === 'function'
+      ? { type: ProviderType.SERVICE, provider }
+      : provider
+  ), target)
+// ...
+```
+
+### 将 `providers` 提升全局
+
+我们将默认定义在根模块的 `provider` 将会是全局的。
+
+先将应用在 `UserController` 的中间件和管道移除。因为它们将会被提升为全局。
+
+#### 提取 `providers`
+
+```ts
+export class ModuleNode {
+  private static _root: ModuleNode | null
+  // 由原先的 { providers: Map } 转换为现在的 Map
+  // 记得更改对应地方（也可以不更改，包括这里）
+  private static _globals = new Map<Constructor, ModuleNode>()
+
+  private node: AppModule
+  private children: ModuleNode[] = []
+
+  constructor(
+    module: Constructor
+  ) {
+    this.node = AppModule.getInstance(module)
+
+    if (!ModuleNode._root) {
+      // 如果根节点为空
+      // 那么当前节点将成为根节点
+      // 我们会将根节点的 providers 作为全局的
+      // 这里是将 provider 提取出
+      // 放入我们生成的一个新的全局模块
+      const Deps = AppModule.generateModule({
+        controllers: [],
+        providers: this.module.providers,
+        imports: [],
+        exports: []
+      })
+      // 声明为全局模块
+      Globals()(Deps)
+      // 加入新的全局模块
+      this.module.imports.push(Deps)
+      ModuleNode._root = this
+    }
+
+    this.mount()
+  }
+  // ...
+}
+```
+
+#### 生成模块
+
+上面涉及的生成模块方法如下。
+
+```ts
+class AppModule {
+  public static generateModule(config: ModuleConfig) {
+    // 不用担心 BaseModule 冲突
+    // 因为它仅存在于这个函数内部
+    @Module(config)
+    class BaseModule {}
+
+    return BaseModule
+  }
+}
+```
+
+#### 注入 `provider`
+
+具体新增代码如下：
+
+```ts
+import { Constructor, Middleware, Module, ModuleConfig, Pipe, Provider, ProviderType, TokenConfig, UseMiddleware, UsePipe } from '@expressive/common'
+import { Entities } from './entities'
+
+export class AppModule implements ModuleConfig {
+  private static Manager = new Entities()
+  private readonly _providers: Provider[]
+
+  public static generateModule(config: ModuleConfig) {
+    @Module(config)
+    class BaseModule {}
+
+    return BaseModule
+  }
+
+  // 主要就是这个方法
+  // 目前分别注入管道和中间件
+  public injectGlobalsProvider(providers: Provider[]) {
+    const pipes = providers.filter(provider => provider.type === ProviderType.PIPE).map(({ provider: pipe }) => {
+      if (pipe.prototype instanceof Pipe) return pipe as Constructor<Pipe>
+
+      throw new TypeError(`${pipe.name} is not pipe!`)
+    })
+
+    const middlewares = providers.filter(provider => provider.type === ProviderType.MIDDLEWARE).map(({ provider: middleware }) => {
+      if (middleware.prototype instanceof Middleware) return middleware as Constructor<Middleware>
+      throw new TypeError(`${middleware.name} is not middleware!`)
+    })
+
+    this.controllers.map(controller => {
+      const _providers = providers.filter(({ type }) => type === ProviderType.SERVICE).map(({ provider }) => provider)
+      // 这里将管道和中间件实例化
+      UsePipe(...pipes.map(Pipe => AppModule.Manager.toEntity(Pipe, _providers)))(controller)
+      UseMiddleware(...middlewares.map(Middleware => AppModule.Manager.toEntity(Middleware, _providers)))(controller)
+    })
+  }
+
+  public injectGlobalsImport(imports: AppModule[]) {
+    const globalProviders = imports.flatMap(module => module.providers)
+    this.providers = globalProviders
+    this.providers = this.imports.flatMap(m => AppModule.Modules.get(m).exports)
+      .map(provider => ({ type: ProviderType.SERVICE, provider }))
+    this.imports = imports.map(module => module.prototype)
+
+    this.injectGlobalsProvider(globalProviders)
+  }
+
+  public set providers(providers) {
+    for (const provider of providers) {
+      if (!this._providers.includes(provider)) {
+        this._providers.push(provider)
+      }
+    }
+  }
+
+  public get services() {
+    return this._providers.filter(({ type }) => type === ProviderType.SERVICE).map(({ provider }) => provider)
+  }
+
+  protected parseMetadata(module: Constructor): Omit<ModuleConfig, 'providers'> & { providers: Provider[] } {
+    const controllers = Reflect.getMetadata(TokenConfig.ModuleControllers, module)
+    const providers = Reflect.getMetadata(TokenConfig.ModuleProviders, module)
+    const exports = Reflect.getMetadata(TokenConfig.ModuleExports, module)
+    const imports = Reflect.getMetadata(TokenConfig.ModuleImports, module)
+    return { controllers, providers, exports, imports }
+  }
+}
+```
+
+### 修改 `Router`
+
+修改的就只有 `Router.bindRouter` 这里。
+
+```ts
+  public bindRouter(entity: Object) {
+    for (const name of entityMethodNames) {
+      const { fn, url, method, params, statusCode, middlewares: routerMiddlewares = [] } = this.parseRouterFnData(entity, name, baseUrl)
+      this.router[HttpRequestName[method]](url,
+        baseMiddlewares
+          .concat(routerMiddlewares)
+          // 主要就是这里
+          // 原先是在这里进行实例化
+          // 现在改成由外部控制实例化
+          // 此处直接调用
+          .map(Middleware => Middleware.use),
+      )
+    }
+
+    return this.router
+  }
+```
+
+完成以上步骤之后，把那些类型问题修复完毕之后。全局的管道和中间件就实现了。
