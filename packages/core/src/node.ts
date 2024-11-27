@@ -1,11 +1,9 @@
-import { Constructor } from '@expressive/common'
+import { Constructor, Globals } from '@expressive/common'
 import { AppModule } from './module'
 
 export class ModuleNode {
   private static _root: ModuleNode | null
-  private static _globals = {
-    providers: new Map<Constructor, ModuleNode>()
-  }
+  private static _globals = new Map<Constructor, ModuleNode>()
 
   private node: AppModule
   private children: ModuleNode[] = []
@@ -16,6 +14,14 @@ export class ModuleNode {
     this.node = AppModule.getInstance(module)
 
     if (!ModuleNode._root) {
+      const Deps = AppModule.generateModule({
+        controllers: [],
+        providers: this.module.providers,
+        imports: [],
+        exports: []
+      })
+      Globals()(Deps)
+      this.module.imports.push(Deps)
       ModuleNode._root = this
     }
 
@@ -32,7 +38,7 @@ export class ModuleNode {
         const m = new ModuleNode(module)
 
         if (m.node.global) {
-          ModuleNode.globals.providers.set(module, m)
+          ModuleNode.globals.set(module, m)
         }
         else this.children.push(m)
       }
@@ -53,14 +59,14 @@ export class ModuleNode {
 
   public static getTree() {
     if (ModuleNode.root) {
-      ModuleNode.injectGlobal(ModuleNode.root, Array.from(ModuleNode.globals.providers.values()))
+      ModuleNode.injectGlobal(ModuleNode.root, Array.from(ModuleNode.globals.values()))
     }
 
     return ModuleNode.root
   }
 
   public hasGlobals(module: Constructor): boolean {
-    return ModuleNode.globals.providers.has(module)
+    return ModuleNode.globals.has(module)
   }
 
   public hasModule(module: Constructor): boolean {

@@ -1,14 +1,14 @@
 import { Constructor } from '@expressive/common'
 
 export class Entities {
-  private static entities: Map<Constructor, Object> = new Map()
+  private static entities: Map<Constructor, unknown> = new Map()
 
   public get size() {
     return Entities.entities.size
   }
 
-  public toEntity(proto: Constructor, providers: Constructor[] = []): Object {
-    if (this.hasEntity(proto)) return this.getEntity(proto)
+  public toEntity<R = unknown>(proto: Constructor<R>, providers: Constructor[] = []): R {
+    if (this.hasEntity(proto)) return this.getEntity(proto) as R
 
     const args = (Reflect.getMetadata("design:paramtypes", proto) as Constructor[]) || []
 

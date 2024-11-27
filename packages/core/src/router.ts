@@ -20,7 +20,7 @@ export class Router {
   public bindRouter(entity: Object) {
     const baseUrl = Reflect.getMetadata(TokenConfig.Controller, this.controller)
     const entityMethodNames = this.getMethodList(this.controller)
-    const baseMiddlewares = (Reflect.getMetadata(TokenConfig.ModuleMiddleware, this.controller) || []) as Array<Constructor<Middleware>>
+    const baseMiddlewares = (Reflect.getMetadata(TokenConfig.ModuleMiddleware, this.controller) || []) as Array<Middleware>
     const basePipes = (Reflect.getMetadata(TokenConfig.RouterPipe, this.controller) || []) as Array<Pipe>
 
     for (const name of entityMethodNames) {
@@ -29,7 +29,7 @@ export class Router {
       this.router[HttpRequestName[method]](url,
         baseMiddlewares
           .concat(routerMiddlewares)
-          .map(Middleware => new Middleware().use),
+          .map(Middleware => Middleware.use),
         async (req: Request, res: Response, next: NextFunction) => {
           if (statusCode) res.status(statusCode)
           this.callHandle(() => {
@@ -112,7 +112,7 @@ export class Router {
     const method = Reflect.getMetadata(TokenConfig.RouterMethod, entity, name) as RequestType
     const params = Reflect.getMetadata(TokenConfig.Params, entity, name) as ParamsInfo[]
     const statusCode = Reflect.getMetadata(TokenConfig.HttpStatus, entity, name) as StatusCode
-    const middlewares = Reflect.getMetadata(TokenConfig.ModuleMiddleware, entity, name) as Array<Constructor<Middleware>>
+    const middlewares = Reflect.getMetadata(TokenConfig.ModuleMiddleware, entity, name) as Array<Middleware>
 
     return { fn, url, method, params, statusCode, middlewares }
   }

@@ -1,11 +1,13 @@
-import { Constructor, ModuleConfig, TokenConfig } from '@expressive/common'
+import { Constructor, Middleware, Module, ModuleConfig, Pipe, Provider, ProviderType, TokenConfig, UseMiddleware, UsePipe } from '@expressive/common'
+import { Entities } from './entities'
 
 export class AppModule implements ModuleConfig {
 
   public readonly global: boolean
 
   private static Modules = new Map<Constructor, AppModule>()
-  private readonly _providers: Constructor[]
+  private static Manager = new Entities()
+  private readonly _providers: Provider[]
   private readonly _imports: Constructor[]
   private readonly _exports: Constructor[]
   private readonly _controllers: Constructor[]
@@ -31,15 +33,45 @@ export class AppModule implements ModuleConfig {
     AppModule.Modules.set(module, this)
   }
 
+  public static generateModule(config: ModuleConfig) {
+    @Module(config)
+    class BaseModule {}
+
+    return BaseModule
+  }
+
   public static getInstance(module: Constructor) {
     const has = AppModule.Modules.has(module)
     return has ? AppModule.Modules.get(module) : new AppModule(module)
   }
 
+  public injectGlobalsProvider(providers: Provider[]) {
+    const pipes = providers.filter(provider => provider.type === ProviderType.PIPE).map(({ provider: pipe }) => {
+      if (pipe.prototype instanceof Pipe) return pipe as Constructor<Pipe>
+
+      throw new TypeError(`${pipe.name} is not pipe!`)
+    })
+
+    const middlewares = providers.filter(provider => provider.type === ProviderType.MIDDLEWARE).map(({ provider: middleware }) => {
+      if (middleware.prototype instanceof Middleware) return middleware as Constructor<Middleware>
+      throw new TypeError(`${middleware.name} is not middleware!`)
+    })
+
+    this.controllers.map(controller => {
+      const _providers = providers.filter(({ type }) => type === ProviderType.SERVICE).map(({ provider }) => provider)
+      UsePipe(...pipes.map(Pipe => AppModule.Manager.toEntity(Pipe, _providers)))(controller)
+      UseMiddleware(...middlewares.map(Middleware => AppModule.Manager.toEntity(Middleware, _providers)))(controller)
+    })
+  }
+
   public injectGlobalsImport(imports: AppModule[]) {
-    this.providers = imports.flatMap(module => module.providers)
+    const globalProviders = imports.flatMap(module => module.providers)
+    this.providers = globalProviders
     this.providers = this.imports.flatMap(m => AppModule.Modules.get(m).exports)
+      .map(provider => ({ type: ProviderType.SERVICE, provider }))
     this.imports = imports.map(module => module.prototype)
+
+    this.injectGlobalsProvider(globalProviders)
   }
 
   public get name() {
@@ -51,11 +83,15 @@ export class AppModule implements ModuleConfig {
   }
 
   public set providers(providers) {
-    for (const module of providers) {
-      if (!this._providers.includes(module)) {
-        this._providers.push(module)
+    for (const provider of providers) {
+      if (!this._providers.includes(provider)) {
+        this._providers.push(provider)
       }
     }
+  }
+
+  public get services() {
+    return this._providers.filter(({ type }) => type === ProviderType.SERVICE).map(({ provider }) => provider)
   }
 
   public get providers() {
@@ -93,7 +129,7 @@ export class AppModule implements ModuleConfig {
     return this._exports
   }
 
-  protected parseMetadata(module: Constructor): ModuleConfig {
+  protected parseMetadata(module: Constructor): Omit<ModuleConfig, 'providers'> & { providers: Provider[] } {
     const controllers = Reflect.getMetadata(TokenConfig.ModuleControllers, module)
     const providers = Reflect.getMetadata(TokenConfig.ModuleProviders, module)
     const exports = Reflect.getMetadata(TokenConfig.ModuleExports, module)

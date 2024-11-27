@@ -22,13 +22,13 @@ export class AppCore {
   }
 
   private instance(root = this.root) {
-    this.entityManager.toEntity(root.prototype, root.module.providers)
+    this.entityManager.toEntity(root.prototype, root.module.services)
     for (const node of root) {
       this.instance(node)
     }
 
     for (const Controller of root.module.controllers) {
-      const controller = this.entityManager.toEntity(Controller, root.module.providers)
+      const controller = this.entityManager.toEntity(Controller, root.module.services)
       const router = new Router(Controller).bindRouter(controller)
       this.app.use(router)
     }
