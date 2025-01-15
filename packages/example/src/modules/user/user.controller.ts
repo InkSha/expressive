@@ -1,12 +1,14 @@
-import { Body, Controller, Get, Post, Query } from "@expressive/common"
+import { Body, Controller, Get, Post, Query, UseGuard } from "@expressive/common"
 import { UserService } from "./user.service"
 import { ArticleService } from "../article/article.service"
 import { UserInfoDTO } from "./dto/info.dto"
 import { ConfigService } from "@expressive/config"
 import { TransformInt } from '../../pipes/transformInt'
 import { DTOPipe } from '@expressive/dto'
+import { Auth } from '../../guards/auth'
 
 @Controller("user")
+@UseGuard(new Auth())
 export class UserController {
   constructor(
     private readonly service: UserService,

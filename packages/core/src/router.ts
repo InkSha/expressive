@@ -8,6 +8,7 @@ import {
   TokenConfig,
   RequestParam,
   Middleware,
+  Guard,
   Pipe,
 } from "@expressive/common"
 import express, { NextFunction, Request, Response } from "express"
@@ -27,6 +28,7 @@ export class Router {
       const { fn, url, method, params, statusCode, middlewares: routerMiddlewares = [] } = this.parseRouterFnData(entity, name, baseUrl)
 
       this.router[HttpRequestName[method]](url,
+        this.applyGuard(name),
         baseMiddlewares
           .concat(routerMiddlewares)
           .map(Middleware => Middleware.use),
@@ -43,6 +45,25 @@ export class Router {
     }
 
     return this.router
+  }
+
+  private applyGuard(name: string) {
+    const baseGuards = (Reflect.getMetadata(TokenConfig.RouterGuard, this.controller) || []) as Array<Guard>
+    const guards = baseGuards.concat((Reflect.getMetadata(TokenConfig.RouterGuard, this.controller, name) || []) as Array<Guard>)
+    return (request: Request, response: Response, next: NextFunction) => {
+      this.callHandle(() => {
+        for (const guard of guards) {
+          guard.canContinue(request)
+        }
+        return true
+      })
+        .then(data => {
+          if (data === true) next()
+          else {
+            response.send(data)
+          }
+        })
+    }
   }
 
   private getParams(

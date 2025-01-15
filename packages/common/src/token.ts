@@ -3,6 +3,7 @@ export const TokenConfig = {
   Router: "__ROUTER__",
   RouterMethod: "__ROUTER_METHOD__",
   RouterPipe: "__ROUTER_PIPE__",
+  RouterGuard: "__ROUTER_GUARD__",
   Moudle: "__MODULE__",
   Params: "__PARAMS__",
   Injectable: "__INJECTABLE__",

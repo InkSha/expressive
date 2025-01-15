@@ -1,4 +1,4 @@
-import { Middleware, Pipe } from './base'
+import { Guard, Middleware, Pipe } from './base'
 import { StatusCode, RequestType } from "./http"
 import { TokenConfig } from "./token"
 
@@ -36,4 +36,10 @@ export type UsePipe = (...pipes: Pipe[]) => ClassDecorator
 export const UsePipe: UsePipe = (...pipes) => target => {
   const oldPipes: Pipe[] = Reflect.getMetadata(TokenConfig.RouterPipe, target) || []
   Reflect.defineMetadata(TokenConfig.RouterPipe, oldPipes.concat(pipes), target)
+}
+
+export type UseGuard = (guard: Guard) => ClassDecorator & MethodDecorator
+export const UseGuard: UseGuard = (guard) => (target: Object, property?: string | symbol) => {
+  const oldGuards: Guard[] = Reflect.getMetadata(TokenConfig.RouterGuard, target, property) || []
+  Reflect.defineMetadata(TokenConfig.RouterGuard, oldGuards.concat(guard), target, property)
 }
